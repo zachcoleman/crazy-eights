@@ -59,6 +59,22 @@ var RankString = map[Rank]string{
 	King:  "K",
 }
 
+var NameToRank = map[string]Rank{
+	"Ace":   Ace,
+	"Two":   Two,
+	"Three": Three,
+	"Four":  Four,
+	"Five":  Five,
+	"Six":   Six,
+	"Seven": Seven,
+	"Eight": Eight,
+	"Nine":  Nine,
+	"Ten":   Ten,
+	"Jack":  Jack,
+	"Queen": Queen,
+	"King":  King,
+}
+
 func (c Card) Stringify() string {
 	return fmt.Sprintf("%v%v", RankString[c.R], SuitString[c.S])
 }

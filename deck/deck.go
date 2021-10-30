@@ -6,9 +6,12 @@ import (
 	"strings"
 )
 
+// Deck will refer to any slice of cards
 type Deck []Card
 
-func CreateNewDeck() Deck {
+// NewFullDeck creates a new standard 52 card
+// Deck of Cards
+func NewFullDeck() Deck {
 	ret := Deck{}
 	for _, s := range Suits {
 		for _, r := range Ranks {
@@ -23,6 +26,23 @@ func (d Deck) Shuffle() {
 		x, y := rand.Intn(len(d)), rand.Intn(len(d))
 		d[x], d[y] = d[y], d[x]
 	}
+}
+
+func (d *Deck) Draw() (Card, error) {
+	if len(*d) > 0 {
+		var ret Card
+		ret, *d = (*d)[0], (*d)[1:]
+		return ret, nil
+	}
+	return Card{-1, 1}, fmt.Errorf("attempting to draw from empty deck")
+}
+
+func (d Deck) Stringify() string {
+	tmp := []string{}
+	for _, c := range d {
+		tmp = append(tmp, c.Stringify())
+	}
+	return strings.Join(tmp, ",")
 }
 
 func (d Deck) ValidateDeck() bool {
@@ -47,21 +67,4 @@ func (d Deck) ValidateDeck() bool {
 	}
 
 	return sum == len(Suits)*len(Ranks)
-}
-
-func (d Deck) Stringify() string {
-	tmp := []string{}
-	for _, c := range d {
-		tmp = append(tmp, c.Stringify())
-	}
-	return strings.Join(tmp, ",")
-}
-
-func (d *Deck) Draw() (Card, error) {
-	if len(*d) > 0 {
-		var ret Card
-		ret, *d = (*d)[0], (*d)[1:]
-		return ret, nil
-	}
-	return Card{-1, 1}, fmt.Errorf("attempting to draw from empty deck")
 }
