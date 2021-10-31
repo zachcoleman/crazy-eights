@@ -15,20 +15,14 @@ type Game struct {
 	DrawPile    deck.Deck
 	Dealt       bool
 	WildRank    deck.Rank
+	Over        bool
 	Winner      int
 }
 
-func (g *Game) GetCurrentPlayer() *Player {
-	return g.Players.Value.(*Player)
-}
-
-func (g *Game) GetCurrentPlayerHand() deck.Deck {
-	return deck.Deck(g.Players.Value.(*Player).Hand)
-}
-
-func (g *Game) GetCurrentPlayerID() int {
-	return g.Players.Value.(*Player).ID
-}
+func (g *Game) GetCurrentPlayer() *Player       { return g.Players.Value.(*Player) }
+func (g *Game) GetCurrentPlayerHand() deck.Deck { return deck.Deck(g.Players.Value.(*Player).Hand) }
+func (g *Game) GetCurrentPlayerID() int         { return g.Players.Value.(*Player).ID }
+func (g *Game) NextPlayer()                     { g.Players = g.Players.Next() }
 
 func NewGame(numPlayers int) Game {
 	// create players
@@ -114,7 +108,7 @@ func (g Game) ShowHands() []string {
 	return hands
 }
 
-func (g *Game) ValidCard(c deck.Card) bool {
+func (g Game) validCard(c deck.Card) bool {
 	if len(g.DiscardPile) == 0 {
 		return true
 	}
@@ -130,25 +124,110 @@ func (g *Game) ValidCard(c deck.Card) bool {
 	return false
 }
 
+func (g Game) ValidMove(m Move) bool {
+	if IsPass(m) && len(g.DrawPile) > 0 {
+		return true
+	}
+	return (g.GetCurrentPlayerID() == m.PlayerId && // correct player
+		g.validCard(m.Card) && // valid card
+		m.Card == g.GetCurrentPlayerHand()[m.cardIdx]) // correct index
+}
+
+func (g *Game) GetMoves() []Move {
+	moves := []Move{}
+	id := g.GetCurrentPlayerID()
+
+	// build and check pass move
+	passMove := PassMove(id)
+	if g.ValidMove(passMove) {
+		moves = append(moves, passMove)
+	}
+
+	// build and check moves from cards
+	hand := g.GetCurrentPlayerHand()
+	for cardIdx, card := range hand {
+		m := NewMove(id, card, cardIdx)
+		if g.ValidMove(m) {
+			moves = append(moves, m)
+		}
+	}
+
+	return moves
+}
+
+func (g *Game) PlayMove(m Move) error {
+	if g.ValidMove(m) {
+		currPlayerPtr := g.GetCurrentPlayer()
+		currPlayerHand := g.GetCurrentPlayerHand()
+
+		if IsPass(m) {
+			// draw card
+			c, err := g.DrawPile.Draw()
+			if err != nil {
+				return err
+			}
+			currPlayerHand = append(currPlayerHand, c)
+		} else {
+			// play card
+			g.DiscardPile = append(g.DiscardPile, m.Card)
+			currPlayerHand[m.cardIdx] = currPlayerHand[len(currPlayerHand)-1]
+			currPlayerHand = currPlayerHand[:len(currPlayerHand)-1]
+		}
+
+		// update hand
+		(*currPlayerPtr).Hand = currPlayerHand
+
+		// no error to return
+		return nil
+
+	} else {
+		// not valid turn
+		return fmt.Errorf("%v not a valid turn", m.Stringify())
+	}
+}
+
+// TODO: should this check every player or just current one
+func (g Game) IsGameOver() bool {
+	currPlayerHand := g.GetCurrentPlayerHand()
+	if len(currPlayerHand) == 0 {
+		return true
+	}
+	if len(g.DrawPile) == 0 {
+		return true
+	}
+	return false
+}
+
+func (g Game) Score(scoreMap map[deck.Rank]int) map[int]int {
+	scores := map[int]int{}
+	for i := 0; i < g.Players.Len(); i++ {
+		p := g.GetCurrentPlayer()
+		scores[p.ID] = p.Score(scoreMap)
+		g.Players = g.Players.Next()
+	}
+	return scores
+}
+
+func (g *Game) MarkWinner(scores map[int]int) {
+	id, minscore := 0, scores[0]
+	for i, val := range scores {
+		if val < minscore {
+			minscore = val
+			id = i
+		}
+	}
+	g.Winner = id
+}
+
 func (g *Game) Play(scoreMap map[deck.Rank]int) {
-
-	// status
-	// skipped := map[int]bool{}
-	// for i := 0; i < g.Players.Len(); i++ {
-	// 	skipped[g.GetCurrentPlayerID()] = false
-	// 	g.Players = g.Players.Next()
-	// }
-
 	// game loop
 	for {
+		// DEBUG: print player hands
 		fmt.Println("====== TURN ======")
-		for _, hand := range g.ShowHands() {
-			fmt.Println(hand)
-		}
 		fmt.Printf("Current Player ID: %v \n", g.GetCurrentPlayerID())
 		fmt.Printf("Current Player Hand: %v \n", g.GetCurrentPlayerHand().Stringify())
-		fmt.Printf("Eval: %v \n", g.Eval(scoreMap))
 
+		// DEBUG: print the discard pile
 		if len(g.DiscardPile) == 1 {
 			fmt.Println(
 				"Discard:",
@@ -162,74 +241,31 @@ func (g *Game) Play(scoreMap map[deck.Rank]int) {
 			)
 		}
 
-		// get current player ptr and hand
-		currPlayerPtr := g.GetCurrentPlayer()
-		currPlayerHand := g.GetCurrentPlayerHand()
-		played := false
+		// ====== strategy ======
+		moves := g.GetMoves()
+		if len(moves) == 1 {
+			g.PlayMove(moves[0])
+		} else {
+			g.PlayMove(moves[1])
+		}
+		// ======================
 
-		// for card in hand
-		for idx, c := range currPlayerHand {
-
-			// empty discard so play whatever
-			if len(g.DiscardPile) == 0 {
-				g.DiscardPile = append(g.DiscardPile, c)
-				currPlayerHand[idx] = currPlayerHand[len(currPlayerHand)-1]
-				currPlayerHand = currPlayerHand[:len(currPlayerHand)-1]
-				played = true
-				break
-			}
-
-			// once find valid card play it
-			if g.ValidCard(c) {
-				g.DiscardPile = append(g.DiscardPile, c)
-				currPlayerHand[idx] = currPlayerHand[len(currPlayerHand)-1]
-				currPlayerHand = currPlayerHand[:len(currPlayerHand)-1]
-				played = true
-				break
-			}
+		scores := g.Score(scoreMap)
+		for id, score := range scores {
+			fmt.Printf("Player %v: %v \n", id, score)
 		}
 
-		// if no card played then draw
-		if !played {
-			c, _ := g.DrawPile.Draw()
-			currPlayerHand = append(currPlayerHand, c)
-		}
-
-		// update skipped
-		// skipped[currPlayerPtr.ID] = played
-		// if checkAllTrue(skipped) {
-		// 	break
-		// }
-
-		// update hand
-		(*currPlayerPtr).Hand = currPlayerHand
-
-		// if out of cards finish game
-		if len(currPlayerHand) == 0 {
-			g.Winner = currPlayerPtr.ID
+		if g.IsGameOver() {
+			g.MarkWinner(scores)
 			break
 		}
 
-		if len(g.DrawPile) == 0 {
-			// TODO calculate scores
-			break
-		}
+		g.NextPlayer()
 
-		// go to next player
-		g.Players = g.Players.Next()
 	}
 
 	fmt.Println("====== END OF GAME ======")
 	if g.Winner != -1 {
 		fmt.Printf("!!! Winner is Player %v !!!\n", g.Winner)
 	}
-}
-
-func checkAllTrue(check map[int]bool) bool {
-	for _, val := range check {
-		if !val {
-			return false
-		}
-	}
-	return true
 }

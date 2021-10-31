@@ -35,3 +35,11 @@ func (p Player) Stringify() string {
 		deck.Deck(p.Hand).Stringify(),
 	)
 }
+
+func (p Player) Score(scoreMap map[deck.Rank]int) int {
+	score := 0
+	for _, card := range p.Hand {
+		score += scoreMap[card.R]
+	}
+	return score
+}

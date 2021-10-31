@@ -11,7 +11,7 @@ func (g *Game) Eval(scoreMap map[deck.Rank]int) int {
 	hand := g.GetCurrentPlayerHand()
 	for _, card := range hand {
 		score := scoreMap[card.R]
-		if g.ValidCard(card) {
+		if g.validCard(card) {
 			loss += score / 2
 		} else {
 			loss += score
