@@ -242,12 +242,8 @@ func (g *Game) Play(scoreMap map[deck.Rank]int) {
 		}
 
 		// ====== strategy ======
-		moves := g.GetMoves()
-		if len(moves) == 1 {
-			g.PlayMove(moves[0])
-		} else {
-			g.PlayMove(moves[1])
-		}
+		m := SimpleStrategy{}.PickMove(g)
+		g.PlayMove(m)
 		// ======================
 
 		scores := g.Score(scoreMap)
