@@ -9,6 +9,8 @@ import (
 // Deck will refer to any slice of cards
 type Deck []Card
 
+func (d Deck) CopyDeck() Deck { return append(Deck{}, d...) }
+
 // NewFullDeck creates a new standard 52 card
 // Deck of Cards
 func NewFullDeck() Deck {

@@ -11,7 +11,7 @@ const Wild deck.Rank = deck.Eight
 
 type Game struct {
 	Players     *ring.Ring
-	DiscardPile []deck.Card
+	DiscardPile deck.Deck
 	DrawPile    deck.Deck
 	Dealt       bool
 	WildRank    deck.Rank
@@ -48,24 +48,22 @@ func NewGame(numPlayers int) Game {
 	}
 }
 
-// TODO: decide if this should be pointer or value reciever
-// both have merit -> value reciever makes it extra safe on not
-// mutating the orig. game being copied
 func (g *Game) CopyGame() Game {
 	// create new same-sized game
 	gameCopy := NewGame(g.Players.Len())
 
 	// copy players
 	for i := 0; i < gameCopy.Players.Len(); i++ {
-		tmp := g.Players.Value.(*Player).copyPlayer()
-		gameCopy.Players.Value = &tmp
+		currPlayer := g.GetCurrentPlayer()
+		newPlayer := currPlayer.copyPlayer()
+		gameCopy.Players.Value = &newPlayer
 		gameCopy.Players = gameCopy.Players.Next()
 		g.Players = g.Players.Next()
 	}
 
 	// copy other fields
-	gameCopy.DiscardPile = g.DiscardPile
-	gameCopy.DrawPile = g.DrawPile
+	gameCopy.DiscardPile = g.DiscardPile.CopyDeck()
+	gameCopy.DrawPile = g.DrawPile.CopyDeck()
 	gameCopy.Dealt = g.Dealt
 	gameCopy.WildRank = g.WildRank
 	gameCopy.Winner = g.Winner
@@ -241,8 +239,14 @@ func (g *Game) Play(scoreMap map[deck.Rank]int) {
 			)
 		}
 
-		// ====== strategy ======
-		m := SimpleStrategy{}.PickMove(g)
+		// ====== implement strategies ======
+		m := Move{}
+		if g.GetCurrentPlayerID() == 0 {
+			m = SimpleStrategy{}.PickMove(g)
+		} else {
+			m = EvalStratgy{ScoreMap: scoreMap}.PickMove(g)
+		}
+		fmt.Printf("Player: %v, card: %v \n", m.PlayerId, m.Card.Stringify())
 		g.PlayMove(m)
 		// ======================
 

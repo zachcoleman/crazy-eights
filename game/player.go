@@ -7,7 +7,7 @@ import (
 
 type Player struct {
 	ID   int
-	Hand []deck.Card
+	Hand deck.Deck
 }
 
 func NewPlayer(id int) Player {
@@ -20,7 +20,7 @@ func NewPlayer(id int) Player {
 func (p Player) copyPlayer() Player {
 	return Player{
 		p.ID,
-		p.Hand,
+		p.Hand.CopyDeck(),
 	}
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"crazy-eights/game"
+	"fmt"
 	"math/rand"
 	"time"
 )
@@ -17,11 +18,23 @@ func main() {
 	}
 	scoreMap := game.BuildScoreMap(config)
 
-	// create and setup game
-	g := game.NewGame(2)
-	g.Deal(5)
-	g.PullStarter()
+	winnerMap := make(map[int]int)
 
-	// play game based on scoring configuration
-	g.Play(scoreMap)
+	for i := 0; i < 1_000; i++ {
+		// create and setup game
+		g := game.NewGame(2)
+		g.Deal(5)
+		g.PullStarter()
+
+		// play game based on scoring configuration
+		g.Play(scoreMap)
+
+		if _, ok := winnerMap[g.Winner]; ok {
+			winnerMap[g.Winner] += 1
+		} else {
+			winnerMap[g.Winner] = 1
+		}
+	}
+	fmt.Println(winnerMap)
+
 }
