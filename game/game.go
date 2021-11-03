@@ -48,6 +48,14 @@ func NewGame(numPlayers int) Game {
 	}
 }
 
+func (g *Game) GoToPlayer(id int) {
+	count := 0
+	for g.GetCurrentPlayerID() != id && count < g.Players.Len() {
+		g.NextPlayer()
+		count++
+	}
+}
+
 func (g *Game) CopyGame() Game {
 	// create new same-sized game
 	gameCopy := NewGame(g.Players.Len())
@@ -244,7 +252,8 @@ func (g *Game) Play(scoreMap map[deck.Rank]int) {
 		if g.GetCurrentPlayerID() == 0 {
 			m = SimpleStrategy{}.PickMove(g)
 		} else {
-			m = EvalStratgy{ScoreMap: scoreMap}.PickMove(g)
+			// m = EvalStratgy{ScoreMap: scoreMap}.PickMove(g)
+			m = MinimaxStrategy{ScoreMap: scoreMap, MaxDepth: 6}.PickMove(g)
 		}
 		fmt.Printf("Player: %v, card: %v \n", m.PlayerId, m.Card.Stringify())
 		g.PlayMove(m)

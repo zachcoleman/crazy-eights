@@ -15,3 +15,14 @@ func (g *Game) Eval(scoreMap map[deck.Rank]int) int {
 	}
 	return loss
 }
+
+func Eval(g Game, p Player, scoreMap map[deck.Rank]int) int {
+	loss := 0
+	g.GoToPlayer(p.ID)
+	hand := g.GetCurrentPlayerHand()
+	for _, card := range hand {
+		score := scoreMap[card.R]
+		loss += score
+	}
+	return -1 * loss
+}

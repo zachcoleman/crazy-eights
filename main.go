@@ -18,22 +18,22 @@ func main() {
 	}
 	scoreMap := game.BuildScoreMap(config)
 
+	numPlayers := 2
 	winnerMap := make(map[int]int)
+	for i := 0; i < numPlayers; i++ {
+		winnerMap[i] = 0
+	}
 
-	for i := 0; i < 1_000; i++ {
+	for i := 0; i < 100; i++ {
 		// create and setup game
-		g := game.NewGame(2)
+		g := game.NewGame(numPlayers)
 		g.Deal(5)
 		g.PullStarter()
+		g.GoToPlayer(i % numPlayers) // alternate who plays first
 
 		// play game based on scoring configuration
 		g.Play(scoreMap)
-
-		if _, ok := winnerMap[g.Winner]; ok {
-			winnerMap[g.Winner] += 1
-		} else {
-			winnerMap[g.Winner] = 1
-		}
+		winnerMap[g.Winner] += 1
 	}
 	fmt.Println(winnerMap)
 
